@@ -1226,15 +1226,18 @@ class File(hdf5extension.File):
                     "parameters should be provided."
                 )
 
-            # Making strides=(0,...) below is a trick to create the
-            # array fast and without memory consumption
-            dflt = np.zeros((), dtype=atom.dtype)
-            obj = np.ndarray(
-                shape,
-                dtype=atom.dtype,
-                buffer=dflt,
-                strides=(0,) * len(shape),
-            )
+            if np.any(atom.dflt):
+                obj = np.full(shape, atom.dflt, dtype=atom.dtype)
+            else:
+                # Zero strides signal an uninitialized array to the C layer.
+                # Keep zero initialization fast and without memory consumption.
+                dflt = np.zeros((), dtype=atom.dtype)
+                obj = np.ndarray(
+                    shape,
+                    dtype=atom.dtype,
+                    buffer=dflt,
+                    strides=(0,) * len(shape),
+                )
         else:
             flavor = flavor_of(obj)
             # use a temporary object because converting obj at this stage

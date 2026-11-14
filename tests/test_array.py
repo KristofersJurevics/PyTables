@@ -2729,6 +2729,32 @@ class TestCreateArrayArgs(common.TempFileMixin, common.PyTablesTestCase):
         self.assertEqual(ptarr.atom.dtype, self.atom.dtype)
         self.assertTrue(common.allequal(np.zeros_like(self.obj), nparr))
 
+    def test_atom_default_initializes_values(self):
+        atoms = [
+            tb.Float32Atom(dflt=np.nan),
+            tb.Int32Atom(dflt=7),
+            tb.StringAtom(4, dflt=b"abc"),
+            tb.ComplexAtom(itemsize=16, dflt=2 + 3j),
+            tb.BoolAtom(dflt=True),
+        ]
+        for index, atom in enumerate(atoms):
+            with self.subTest(atom=atom):
+                name = f"default_{index}"
+                array = self.h5file.create_array(
+                    "/", name, atom=atom, shape=(2, 3)
+                )
+                expected = np.full((2, 3), atom.dflt, dtype=atom.dtype)
+                np.testing.assert_array_equal(array.read(), expected)
+
+        self.h5file.close()
+        self.h5file = tb.open_file(self.h5fname)
+        for index, atom in enumerate(atoms):
+            with self.subTest(atom=atom):
+                np.testing.assert_array_equal(
+                    self.h5file.get_node(f"/default_{index}").read(),
+                    np.full((2, 3), atom.dflt, dtype=atom.dtype),
+                )
+
     def test_kwargs_obj(self):
         self.h5file.create_array(
             self.where, self.name, title=self.title, obj=self.obj
